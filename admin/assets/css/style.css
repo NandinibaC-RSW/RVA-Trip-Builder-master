@@ -1,0 +1,262 @@
+
+.day-wrap {
+       width:60% !important;
+       margin: 10px 20px 0 2px;
+}
+
+.wrap-right {
+       text-align:right;
+}
+
+.full-width {
+       width: 100%;
+}
+
+.half-width {
+       width: 50%;
+}
+.dest-width {
+       width: 80%;
+}
+
+#map-canvas{
+      height: 400px;
+      width: 80%;
+}
+
+.small-width{
+      width: 20%;
+}
+
+
+/* CSS for modal */
+.modal {
+       display: none;
+       position: fixed;
+       z-index: 9999;
+       left: 0;
+       top: 0;
+       width: 100%;
+       height: 100%;
+       overflow: auto;
+       background-color: rgba(0,0,0,0.5);
+   }
+    .modal-heading {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+   .modal-content {
+       background-color: #fefefe;
+       margin: 5% auto;
+       padding: 20px;
+       border: 1px solid #888;
+       width: 80%;
+   }
+   .pdf-container {
+       width: 100%;
+       height: 620px;
+   }
+   .close {
+       color: #aaaaaa;
+       float: right;
+       font-size: 28px;
+       font-weight: bold;
+       margin: -20px -18px 0px 0px;
+   }
+ .add-dest-modal {
+       display: none;
+       position: fixed;
+       left: 0;
+       top: 0;
+       width: 100%;
+       height: 100%;
+       overflow: auto;
+       background-color: rgba(0,0,0,0.5);
+   }
+      .dest-modal-content {
+       background-color: #fefefe;
+       margin: 5% auto;
+       padding: 20px;
+       border: 1px solid #888;
+       width: 60%;
+   }
+   .closes {
+       color: #aaaaaa;
+       float: right;
+       font-size: 28px;
+       font-weight: bold;
+       margin: -20px 0 0 0;
+       cursor: pointer;
+   }
+   
+   .close:hover,
+   .close:focus {
+       color: #000;
+       text-decoration: none;
+       cursor: pointer;
+   }
+   .day-wraps {
+       width:85% !important;
+}
+   .day-button, .add-day-button {
+    font-size: 16px;
+    display: inline-block;
+    width: 100%;
+    padding: 10px 20px;
+    background-color: rgba(240, 240, 240, 1);
+    color: #000;
+    text-decoration: none;
+    text-align: center;
+}
+
+.add-day-button {
+    background-color: #eee;
+    color: #666;
+    border: 1px solid #ccc;
+    border-style: dashed;
+}
+
+#sidebar {
+  flex-basis: 15rem;
+  flex-grow: 1;
+  padding: 1rem;
+  max-width: 30rem;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+#map {
+  flex-basis: 0;
+  flex-grow: 4;
+  height: 100%;
+  width: 100%;
+}
+
+.selected-options-table {
+    list-style: none;
+    padding: 20px 0;
+    margin: 0;
+    width: 80%;
+}
+
+.selected-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.selected-option .remove-option-container {
+    margin-left: 10px;
+}
+
+.customer-div{
+    display: none;
+}
+
+span[jstcache="27"] {
+    display: none !important;
+}
+
+.map-container{
+    height: 60vh;
+/*    display: none;*/
+    margin-bottom: 10px;
+}
+
+.map-containers{
+    height: 60vh;
+/*    width: 100vh;*/
+    display: none;
+    margin-bottom: 10px;
+}
+#sidebar {
+  flex-basis: 15rem;
+  flex-grow: 1;
+  padding: 1rem;
+  max-width: 30rem;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.map {
+  flex-basis: 0;
+  flex-grow: 4;
+  height: 100%;
+  width: 100%;
+}
+
+.stops-div{
+    display: none;
+    margin-left: 50px;
+}
+.activities-div{
+    display: none;
+    margin-left: 50px;
+}
+
+.estimate-time{
+    display: none;
+}
+
+#deleteConfirmationModal{
+    display: none; 
+    position: fixed; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); 
+    background: rgba(0, 0, 0, 0.8); 
+    color: #fff; 
+    padding: 40px; 
+    z-index: 9999;
+}
+#deleteConfirmationModal p{
+        font-size: 20px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin: 1em 0px 3em 0px;
+}
+
+.delete-button{
+    margin-right: 10px !important;
+}
+.disabled-section {
+    opacity: 0.5;
+    pointer-events: none;
+}
+.rv-container {
+    display: flex !important;
+    flex-wrap: wrap !important;
+}
+.rv-box {
+    width: 10% !important;
+    margin: 1% !important;
+    padding: 10px !important;
+    border: 1px solid #ddd !important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
+}
+.half-width {
+    width: 100% !important;
+}
+.input-currency-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+input.currency-input {
+    padding-left: 25px;
+}
