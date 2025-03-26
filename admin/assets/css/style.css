@@ -95,14 +95,10 @@
        text-decoration: none;
        cursor: pointer;
    }
-   .day-wraps {
-       width:85% !important;
-}
    .day-button, .add-day-button {
     font-size: 16px;
     display: inline-block;
-    width: 100%;
-    padding: 10px 20px;
+    padding: 10px;
     background-color: rgba(240, 240, 240, 1);
     color: #000;
     text-decoration: none;

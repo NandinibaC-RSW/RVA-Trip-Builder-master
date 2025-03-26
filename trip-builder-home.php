@@ -191,29 +191,46 @@ function wpdocs_bartag_func( $atts ) {
 
         $day = get_post_meta($post_id, '_trip_day_count', true);
         $trip_end_date = date('Y-m-d', strtotime($trip_start_date . ' + ' . $day . ' days'));
-        for ($i=1; $i <= $day; $i++) { 
+        // Fetch the custom display order if it exists
+        $route_display_order = get_post_meta($post_id, '_route_display_order', true);
+        $ordered_routes = array();
 
-        $current_route = "_route_" . $i;
-        $current_title = "_route_title_" . $i;
-        $current_description = "_day_description_".$i;     
-        $current_value = get_post_meta($post_id, $current_route, true);
-        
-        if ($current_value) {
-            $current_title = get_post_meta($post_id, $current_title, true);
-            $current_description = get_post_meta($post_id, $current_description, true);
-
-            echo'<div class="day_section_part">
-            <div class="day_section">
-                <a href="?trip_id='. $post_id .'&trip_stay='. $i .'">
-                <div class="day_btn">'. $current_title .'<i class="fa-solid fa-chevron-right"></i>
-                <p style="font-size:15px;">'.$current_description.'</p>
-                </div>
-                </a>
-            </div>
-        </div>';
-        } else {
-            continue;
+        if (!empty($route_display_order)) {
+            // Convert the comma-separated string to an array
+            $ordered_routes = explode(',', $route_display_order);
         }
+
+        // If no custom order exists, fall back to natural order
+        if (empty($ordered_routes)) {
+            // Generate default route order from 1 to total days
+            $day = get_post_meta($post_id, '_trip_day_count', true);
+            $ordered_routes = range(1, $day);
+        }
+
+        // Modified stay display loop using the ordered routes
+        for ($index = 0; $index < count($ordered_routes); $index++) { 
+            $i = $ordered_routes[$index];
+            $current_route = "_route_" . $i;
+            $current_title = "_route_title_" . $i;   
+            $current_description = "_day_description_".$i;  
+            $current_value = get_post_meta($post_id, $current_route, true);
+            
+            if ($current_value) {
+                $current_title = get_post_meta($post_id, $current_title, true);
+                $current_description = get_post_meta($post_id, $current_description, true);
+
+                echo'<div class="day_section_part">
+                <div class="day_section">
+                    <a href="?trip_id='. $post_id .'&trip_stay='. $i .'">
+                    <div class="day_btn">'. $current_title .'<i class="fa-solid fa-chevron-right"></i>
+                    <p style="font-size:15px;">'.$current_description.'</p>
+                    </div>
+                    </a>
+                </div>
+            </div>';
+            } else {
+                continue;
+            }
     }
 
    echo '<div class="content_area">
@@ -934,29 +951,46 @@ function wpdocs_bartag_func( $atts ) {
 
         $day = get_post_meta($post_id, '_trip_day_count', true);
         $trip_end_date = date('Y-m-d', strtotime($trip_start_date . ' + ' . $day . ' days'));
-        for ($i=1; $i <= $day; $i++) { 
+        // Fetch the custom display order if it exists
+        $route_display_order = get_post_meta($post_id, '_route_display_order', true);
+        $ordered_routes = array();
 
-        $current_route = "_route_" . $i;
-        $current_title = "_route_title_" . $i;   
-        $current_description = "_day_description_".$i;  
-        $current_value = get_post_meta($post_id, $current_route, true);
-        
-        if ($current_value) {
-            $current_title = get_post_meta($post_id, $current_title, true);
-            $current_description = get_post_meta($post_id, $current_description, true);
-
-            echo'<div class="day_section_part">
-            <div class="day_section">
-                <a href="?trip_id='. $post_id .'&trip_stay='. $i .'">
-                <div class="day_btn">'. $current_title .'<i class="fa-solid fa-chevron-right"></i>
-                <p style="font-size:15px;">'.$current_description.'</p>
-                </div>
-                </a>
-            </div>
-        </div>';
-        } else {
-            continue;
+        if (!empty($route_display_order)) {
+            // Convert the comma-separated string to an array
+            $ordered_routes = explode(',', $route_display_order);
         }
+
+        // If no custom order exists, fall back to natural order
+        if (empty($ordered_routes)) {
+            // Generate default route order from 1 to total days
+            $day = get_post_meta($post_id, '_trip_day_count', true);
+            $ordered_routes = range(1, $day);
+        }
+
+        // Modified stay display loop using the ordered routes
+        for ($index = 0; $index < count($ordered_routes); $index++) { 
+            $i = $ordered_routes[$index];
+            $current_route = "_route_" . $i;
+            $current_title = "_route_title_" . $i;   
+            $current_description = "_day_description_".$i;  
+            $current_value = get_post_meta($post_id, $current_route, true);
+            
+            if ($current_value) {
+                $current_title = get_post_meta($post_id, $current_title, true);
+                $current_description = get_post_meta($post_id, $current_description, true);
+
+                echo'<div class="day_section_part">
+                <div class="day_section">
+                    <a href="?trip_id='. $post_id .'&trip_stay='. $i .'">
+                    <div class="day_btn">'. $current_title .'<i class="fa-solid fa-chevron-right"></i>
+                    <p style="font-size:15px;">'.$current_description.'</p>
+                    </div>
+                    </a>
+                </div>
+            </div>';
+            } else {
+                continue;
+            }
     }
 
    echo '<div class="content_area">

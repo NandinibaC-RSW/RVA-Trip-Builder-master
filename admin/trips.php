@@ -212,28 +212,390 @@ add_action( 'add_meta_boxes', 'add_day_metabox' );
 function render_add_day_metabox( $post ) {
     $trip_id = $post->ID;
     $day_count = get_post_meta($trip_id, '_trip_day_count', true);
-
-    echo '<div class="day-wraps">';
-
-    for ($i = 1; $i <= $day_count; $i++) { 
-        $current_route = "_route_" . $i;
-        $current_title = "_route_title_" . $i;    
-        $current_value = get_post_meta($trip_id, $current_route, true);
+    
+    // Register and enqueue Sortable.js library
+    wp_register_script(
+        'sortable-js', 
+        'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js', 
+        array(), 
+        '1.15.0', 
+        true
+    );
+    wp_enqueue_script('sortable-js');
+    
+    // Add custom CSS
+    ?>
+    <style>
+        .day-wraps .day-item {
+            background: #f8f8f8;
+            padding: 8px;
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+            cursor: move;
+            border-radius: 3px;
+        }
+        .day-wraps .day-item:hover {
+            background: #f0f0f0;
+        }
+        .day-wraps .day-item a {
+            display: block;
+            text-decoration: none;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+        }
+        .sortable-chosen {
+            background: #e8e8e8 !important;
+        }
+        .sortable-drag {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .order-updated-message {
+            color: green;
+            display: none;
+            margin: 10px 0;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .add-day-button, .save-order-button {
+            display: block;
+            margin-top: 10px;
+            padding: 8px;
+            text-decoration: none;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .save-order-button {
+            background-color: #e0e0e0;
+            color: #888;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .save-order-button.active {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+    </style>
+    
+    <div class="day-wraps" id="stay-sortable">
+        <?php
+        // Collect all stays with their original route numbers
+        $stays = array();
         
-        if ($current_value) {
-            $current_title = get_post_meta($trip_id, $current_title, true);
-            echo '<p><a class="day-button" href="admin.php?page=trip-day&tab=edit_day&trip=' . $trip_id .'&day=' . $i .'"> '. $current_title .'</a></p>';
+        // Get all meta keys that start with _route_title_
+        global $wpdb;
+        $meta_keys = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT meta_key, meta_value FROM $wpdb->postmeta 
+                WHERE post_id = %d AND meta_key LIKE '_route_title_%%'
+                ORDER BY meta_key ASC",
+                $trip_id
+            )
+        );
+        
+        // Build the stays array with original route numbers
+        foreach ($meta_keys as $meta) {
+            $route_number = str_replace('_route_title_', '', $meta->meta_key);
+            $route_value = get_post_meta($trip_id, "_route_" . $route_number, true);
+            
+            if ($route_value) {
+                $stays[] = array(
+                    'route_num' => $route_number,
+                    'title' => $meta->meta_value,
+                    'route' => $route_value
+                );
+            }
+        }
+        
+        // Sort stays by a display order meta if it exists
+        $display_order = get_post_meta($trip_id, '_route_display_order', true);
+        if (!empty($display_order)) {
+            $display_order = explode(',', $display_order);
+            $sorted_stays = array();
+            
+            // Reorder stays according to display_order
+            foreach ($display_order as $route_num) {
+                foreach ($stays as $stay) {
+                    if ($stay['route_num'] == $route_num) {
+                        $sorted_stays[] = $stay;
+                        break;
+                    }
+                }
+            }
+            
+            // Add any stays that weren't in the display order
+            foreach ($stays as $stay) {
+                if (!in_array($stay['route_num'], $display_order)) {
+                    $sorted_stays[] = $stay;
+                }
+            }
+            
+            $stays = $sorted_stays;
+        }
+        
+        // Output stays
+        foreach ($stays as $stay) {
+            echo '<div class="day-item" data-route-num="' . $stay['route_num'] . '">
+                <a class="day-button" href="admin.php?page=trip-day&tab=edit_day&trip=' . $trip_id .'&day=' . $stay['route_num'] .'">' . $stay['title'] . '</a>
+            </div>';
+        }
+        ?>
+    </div>
+    
+    <a class="add-day-button" href="admin.php?page=trip-day&tab=add_day&trip=<?php echo $trip_id; ?>">+ Add a Stay</a>
+    
+    <button class="save-order-button" id="save-order-btn" disabled>Save New Order</button>
+    
+    <div class="order-updated-message">Order updated successfully!</div>
+    
+    <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var ajaxurl = "<?php echo admin_url('admin-ajax.php'); ?>";
+        var tripId = <?php echo $trip_id; ?>;
+        var nonce = "<?php echo wp_create_nonce('update_stay_order_nonce'); ?>";
+        var saveOrderBtn = document.getElementById('save-order-btn');
+        var originalOrder = [];
+        
+        // Initialize Sortable
+        var el = document.getElementById('stay-sortable');
+        var sortable = Sortable.create(el, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onStart: function() {
+                // Store original order when dragging starts
+                originalOrder = Array.from(el.querySelectorAll('.day-item')).map(function(item) {
+                    return item.getAttribute('data-route-num');
+                });
+            },
+            onEnd: function() {
+                // Get the new order of route numbers
+                var currentOrder = Array.from(el.querySelectorAll('.day-item')).map(function(item) {
+                    return item.getAttribute('data-route-num');
+                });
+                
+                // Compare current order with original order
+                var orderChanged = JSON.stringify(originalOrder) !== JSON.stringify(currentOrder);
+                
+                // Enable/disable save button based on order change
+                if (orderChanged) {
+                    saveOrderBtn.classList.add('active');
+                    saveOrderBtn.disabled = false;
+                } else {
+                    saveOrderBtn.classList.remove('active');
+                    saveOrderBtn.disabled = true;
+                }
+            }
+        });
+        
+        // Save order button click event
+        saveOrderBtn.addEventListener('click', function() {
+            // Show confirmation dialog
+            var confirmSave = confirm('It will remove your Stops.\nAre you sure you want to save the new order of stays?');
+            
+            if (confirmSave) {
+                // Get the new order of route numbers
+                var items = Array.from(el.querySelectorAll('.day-item'));
+                var order = items.map(function(item) {
+                    return item.getAttribute('data-route-num');
+                });
+                
+                // Send AJAX request
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', ajaxurl, true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            var msg = document.querySelector('.order-updated-message');
+                            msg.style.display = 'block';
+                            setTimeout(function() {
+                                msg.style.display = 'none';
+                            }, 1500);
+                            
+                            // Disable save button and reset state
+                            saveOrderBtn.classList.remove('active');
+                            saveOrderBtn.disabled = true;
+                            
+                            // Update original order
+                            originalOrder = order;
+                        } else {
+                            alert('Failed to update stay order. Please try again.');
+                        }
+                    }
+                };
+                
+                var data = 'action=update_stay_order' + 
+                           '&trip_id=' + tripId + 
+                           '&order=' + encodeURIComponent(JSON.stringify(order)) + 
+                           '&security=' + nonce;
+                           
+                xhr.send(data);
+            }
+        });
+    });
+    </script>
+    <?php
+}
+
+// Handle the AJAX request to update stay order
+function update_stay_order() {
+    // Check security nonce
+    check_ajax_referer('update_stay_order_nonce', 'security');
+    
+    // Get and validate trip ID
+    $trip_id = isset($_POST['trip_id']) ? intval($_POST['trip_id']) : 0;
+    if (!$trip_id) {
+        wp_send_json_error('Invalid trip ID');
+    }
+    
+    // Get and validate order array
+    $order = isset($_POST['order']) ? json_decode(stripslashes($_POST['order']), true) : array();
+    if (!is_array($order) || empty($order)) {
+        wp_send_json_error('Invalid order data');
+    }
+    
+    // Get current stays
+    global $wpdb;
+    $existing_stays = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT meta_key, meta_value FROM $wpdb->postmeta 
+            WHERE post_id = %d AND meta_key LIKE '_route_title_%%'
+            ORDER BY meta_key ASC",
+            $trip_id
+        )
+    );
+    
+    // Find the max route number of existing stays
+    $max_route_num = 0;
+    foreach ($existing_stays as $stay) {
+        $route_num = intval(str_replace('_route_title_', '', $stay->meta_key));
+        $max_route_num = max($max_route_num, $route_num);
+    }
+    
+    // If the submitted order doesn't match the number of existing stays,
+    // it means a new stay has been added
+    if (count($order) > count($existing_stays)) {
+        // Find the route number of the new stay
+        $new_stay_route_num = count($existing_stays) + 1;
+        
+        // Always append the new stay to the end
+        $order = array_merge(
+            array_diff($order, [$new_stay_route_num]),  // Remove any existing reference to new stay
+            [$new_stay_route_num]  // Add new stay at the end
+        );
+    }
+    
+    // Save the display order as a comma-separated string
+    update_post_meta($trip_id, '_route_display_order', implode(',', $order));
+    
+    // Get trip starting and ending locations
+    $trip_starting_address = get_post_meta($trip_id, '_trip_starting_address', true);
+    $trip_starting_lat = get_post_meta($trip_id, '_trip_starting_address_lat', true);
+    $trip_starting_lng = get_post_meta($trip_id, '_trip_starting_address_lang', true);
+    
+    $trip_ending_address = get_post_meta($trip_id, '_trip_ending_address', true);
+    $trip_ending_lat = get_post_meta($trip_id, '_trip_ending_address_lat', true);
+    $trip_ending_lng = get_post_meta($trip_id, '_trip_ending_address_lang', true);
+    
+    // Process stays in the new order and update each one
+    $current_start_address = $trip_starting_address;
+    $current_start_lat = $trip_starting_lat;
+    $current_start_lng = $trip_starting_lng;
+    
+    // First pass - update all stays with new starting/ending points
+    for ($i = 0; $i < count($order); $i++) {
+        $route_num = $order[$i];
+        
+        // Update this stay's starting point to be the previous stay's ending point
+        // (or the trip's starting point for the first stay)
+        update_post_meta($trip_id, "_route_day_start_address_" . $route_num, $current_start_address);
+        update_post_meta($trip_id, "_route_day_start_address_lat_" . $route_num, $current_start_lat);
+        update_post_meta($trip_id, "_route_day_start_address_lng_" . $route_num, $current_start_lng);
+        
+        // Get this stay's ending point for the next iteration
+        $stay_end_address = get_post_meta($trip_id, "_route_day_end_address_" . $route_num, true);
+        $stay_end_lat = get_post_meta($trip_id, "_route_day_end_address_lat_" . $route_num, true);
+        $stay_end_lng = get_post_meta($trip_id, "_route_day_end_address_lng_" . $route_num, true);
+        
+        // Check if this is the last stay and if it's marked as final day
+        $is_last = ($i == count($order) - 1);
+        $is_final_day = get_post_meta($trip_id, "_is_final_day_" . $route_num, true);
+        
+        if ($is_last && $is_final_day == 'on') {
+            // If this is the last stay and it's marked as final day, 
+            // set its ending point to the trip's ending point
+            $stay_end_address = $trip_ending_address;
+            $stay_end_lat = $trip_ending_lat;
+            $stay_end_lng = $trip_ending_lng;
+            
+            // Update the ending point for this stay
+            update_post_meta($trip_id, "_route_day_end_address_" . $route_num, $stay_end_address);
+            update_post_meta($trip_id, "_route_day_end_address_lat_" . $route_num, $stay_end_lat);
+            update_post_meta($trip_id, "_route_day_end_address_lng_" . $route_num, $stay_end_lng);
+        }
+
+         // Remove stops for this stay
+
+        $stops_meta_key = "_selected_destinations_" . $route_num;
+        update_post_meta($trip_id, $stops_meta_key, array());
+        
+        // Set up for the next iteration - the next stay will start where this one ends
+        $current_start_address = $stay_end_address;
+        $current_start_lat = $stay_end_lat;
+        $current_start_lng = $stay_end_lng;
+    }
+    
+    // Second pass - update all routes with new directions based on updated points
+    for ($i = 0; $i < count($order); $i++) {
+        $route_num = $order[$i];
+        
+        // Get updated start and end coordinates for this stay
+        $start_lat = get_post_meta($trip_id, "_route_day_start_address_lat_" . $route_num, true);
+        $start_lng = get_post_meta($trip_id, "_route_day_start_address_lng_" . $route_num, true);
+        $end_lat = get_post_meta($trip_id, "_route_day_end_address_lat_" . $route_num, true);
+        $end_lng = get_post_meta($trip_id, "_route_day_end_address_lng_" . $route_num, true);
+        
+        // Update route directions via Google Maps API
+        if (!empty($end_lat) && !empty($end_lng) && !empty($start_lat) && !empty($start_lng)) {
+            $url = "https://maps.googleapis.com/maps/api/directions/json?origin=$start_lat,$start_lng&destination=$end_lat,$end_lng&units=imperial&key=" . esc_attr(get_option('google_api_key'));
+            $directions_data = wp_remote_get($url);
+            if (!is_wp_error($directions_data)) {
+                $response_body = wp_remote_retrieve_body($directions_data);
+                $data = json_decode($response_body);
+                
+                if ($data && isset($data->routes[0]->legs)) {
+                    $route_data = $data->routes[0]->legs;
+                    
+                    // Update the route data
+                    update_post_meta($trip_id, "_route_" . $route_num, $response_body);
+                    update_post_meta($trip_id, "_end_route_" . $route_num, $route_data);
+                    
+                    // Update travel time
+                    $duration_seconds = $data->routes[0]->legs[0]->duration->value;
+                    $hours = floor($duration_seconds / 3600);
+                    $minutes = floor(($duration_seconds % 3600) / 60);
+                    $end_travel_time = sprintf('%d:%02d', $hours, $minutes);
+                    update_post_meta($trip_id, "_end_route_time_" . $route_num, $end_travel_time);
+                }
+            }
         }
     }
-
-    // Display Add Day Button
-    echo '<a class="add-day-button" href="admin.php?page=trip-day&tab=add_day&trip=' . $trip_id .'">+ Add a Stay</a></br></br>';
-
-    echo '</div>';
+    
+    wp_send_json_success(array(
+        'message' => 'Stay order updated successfully',
+        'order' => $order
+    ));
 }
 
 
 
+add_action('wp_ajax_update_stay_order', 'update_stay_order');
 
 function add_custom_trip_columns($columns) {
 

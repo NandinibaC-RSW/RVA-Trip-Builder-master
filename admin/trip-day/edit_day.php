@@ -157,13 +157,14 @@ for ($i = 1; $i <= 7; $i++) {
 echo '</div>';
 
     echo '<h3>' . __( 'Starting Location', 'your-plugin-textdomain' ) . '</h3>';
-    echo '<input class="full-width" type="text" id="trip_starting_address" name="day_start_address"  value="'. $trip_day_starting_address .'"/></br>';
+    echo '<h4>'. $trip_day_starting_address .'</h4></br>';
+    echo '<input class="full-width" type="hidden" id="trip_starting_address" name="day_start_address"  value="'. $trip_day_starting_address .'"/>';
     echo '<input type="hidden" name="route_start_address" value="'. $trip_day_starting_address .'" />'; 
     echo '<input type="hidden" name="route_start_lat" id="starting_address_lat" value="'. $trip_day_starting_lat .'" />'; 
     echo '<input type="hidden" name="route_start_lng" id="starting_address_lang" value="'. $trip_day_starting_lng .'" />'; 
     echo '<input type="hidden" name="day" id="day_count" value="'. $day .'" />'; 
     
-    echo '<br><h3>Stops <a class="button stops">+ Add</a></h3>';
+    echo '<h3>Stops <a class="button stops">+ Add</a></h3>';
     echo '<div class="stops-div">';
     echo '<label for="trip-category">' . __( 'Category:', 'your-plugin-textdomain' ) . '</label><br/>';
     $args = array(
